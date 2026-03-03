@@ -1,0 +1,768 @@
+"""
+Q1: Finite-population non-zero-sum RPS with pairwise comparison (Local Update).
+
+Sources acknowledged:
+- GT_Coursework_March2026_v01.pdf (assignment specification).
+- Claussen (2016), "Evolutionary Dynamics: How Payoffs and Global Feedback..."
+  for finite-population Local Update process context.
+- Traulsen, Claussen, Hauert (2006), Phys. Rev. E 74, 011901
+  for pairwise comparison process background.
+
+Authorship note:
+- This implementation in this repository was prepared by Ameer Alhashemi.
+"""
+
+import csv
+import os
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+R, P, S = 0, 1, 2
+
+
+def payoff_from_counts(strategy, counts, s):
+    n_r, n_p, n_s = counts
+    if strategy == R:
+        return -s * n_p + n_s
+    if strategy == P:
+        return n_r - s * n_s
+    return -s * n_r + n_p
+
+
+def pairwise_probability(pi_a, pi_b, w, pi_max_diff):
+    # Coursework local-update form:
+    # p_{B->A} = 1/2 + w (pi_A - pi_B) / (2 * 4 * pi_max)
+    p = 0.5 + (w * (pi_a - pi_b)) / (8.0 * pi_max_diff)
+    return float(np.clip(p, 0.0, 1.0))
+
+
+def run_rps_pairwise(N=150, s=1.0, w=0.5, T=30_000, seed=0):
+    rng = np.random.default_rng(seed)
+
+    pop = np.array([R] * (N // 3) + [P] * (N // 3) + [S] * (N - 2 * (N // 3)))
+    rng.shuffle(pop)
+
+    counts = np.bincount(pop, minlength=3)
+
+    # Max payoff difference between two agents in this game:
+    # each pair interaction difference is bounded by (1 + s), summed over (N-1) opponents.
+    pi_max_diff = (N - 1) * (1.0 + s)
+
+    rt = np.zeros(T + 1, dtype=int)
+    pt = np.zeros(T + 1, dtype=int)
+    st = np.zeros(T + 1, dtype=int)
+    rt[0], pt[0], st[0] = counts[R], counts[P], counts[S]
+
+    for t in range(1, T + 1):
+        b = int(rng.integers(N))
+        a = int(rng.integers(N - 1))
+        if a >= b:
+            a += 1
+
+        strat_b = int(pop[b])
+        strat_a = int(pop[a])
+
+        pi_b = payoff_from_counts(strat_b, counts, s)
+        pi_a = payoff_from_counts(strat_a, counts, s)
+        p = pairwise_probability(pi_a, pi_b, w=w, pi_max_diff=pi_max_diff)
+
+        if strat_b != strat_a and rng.random() < p:
+            pop[b] = strat_a
+            counts[strat_b] -= 1
+            counts[strat_a] += 1
+
+        rt[t], pt[t], st[t] = counts[R], counts[P], counts[S]
+
+    return rt, pt, st
+
+
+def first_extinction_time(rt, pt, st):
+    extinct_idx = np.where((rt == 0) | (pt == 0) | (st == 0))[0]
+    if extinct_idx.size == 0:
+        return None
+    return int(extinct_idx[0])
+
+
+def plot_results(rt, pt, name):
+    t = np.arange(len(rt))
+
+    os.makedirs("results", exist_ok=True)
+
+    plt.figure()
+    plt.plot(t, rt, label="R(t)")
+    plt.plot(t, pt, label="P(t)")
+    plt.xlabel("t")
+    plt.ylabel("count")
+    plt.legend()
+    plt.title(name)
+    plt.tight_layout()
+    plt.savefig(f"results/{name}_timeseries.png", dpi=160)
+    plt.close()
+
+    plt.figure()
+    plt.plot(rt, pt, linewidth=1)
+    plt.xlabel("R")
+    plt.ylabel("P")
+    plt.title(name)
+    plt.tight_layout()
+    plt.savefig(f"results/{name}_phase.png", dpi=160)
+    plt.close()
+
+
+def run_q1_sweep(
+    N=150,
+    T=30_000,
+    s_values=(0.8, 1.0, 1.2),
+    w_values=(0.1, 0.5, 1.0),
+    n_seeds=20,
+):
+    os.makedirs("results", exist_ok=True)
+    rows = []
+    for s in s_values:
+        for w in w_values:
+            extinction_times = []
+            final_r = []
+            final_p = []
+            for seed in range(n_seeds):
+                rt, pt, st = run_rps_pairwise(N=N, s=s, w=w, T=T, seed=seed)
+                t_ext = first_extinction_time(rt, pt, st)
+                extinction_times.append((T + 1) if t_ext is None else t_ext)
+                final_r.append(rt[-1] / N)
+                final_p.append(pt[-1] / N)
+
+            # Representative trajectory for figures.
+            rep_rt, rep_pt, _ = run_rps_pairwise(N=N, s=s, w=w, T=T, seed=1)
+            name = f"N{N}_s{s}_w{w}"
+            print("Running:", name)
+            plot_results(rep_rt, rep_pt, name)
+
+            row = {
+                "N": N,
+                "T": T,
+                "s": s,
+                "w": w,
+                "n_seeds": n_seeds,
+                "extinction_time_mean": float(np.mean(extinction_times)),
+                "extinction_time_median": float(np.median(extinction_times)),
+                "extinction_time_min": int(np.min(extinction_times)),
+                "extinction_time_max": int(np.max(extinction_times)),
+                "final_R_mean": float(np.mean(final_r)),
+                "final_P_mean": float(np.mean(final_p)),
+            }
+            rows.append(row)
+
+    out_csv = "results/q1_summary.csv"
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    print("Saved:", out_csv)
+
+
+def main():
+    run_q1_sweep()
+
+
+if __name__ == "__main__":
+    main()
+"""
+Q2: Seasonal birth-only/death-only extension with fluctuating population size.
+
+Sources acknowledged:
+- GT_Coursework_March2026_v01.pdf (assignment requirement for separate birth and death).
+- Claussen (2016), Chapter 24 (finite-population stochastic local-update context).
+- Lecture notes on Local Update / pairwise comparison process.
+
+Authorship note:
+- This implementation in this repository was prepared by Ameer Alhashemi.
+"""
+
+import csv
+import os
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+R, P, S = 0, 1, 2
+
+
+def payoff(strategy, counts, s):
+    n_r, n_p, n_s = counts
+    if strategy == R:
+        return -s * n_p + n_s
+    if strategy == P:
+        return n_r - s * n_s
+    return -s * n_r + n_p
+
+
+def pairwise_probability(pi_a, pi_b, w, pi_max_diff):
+    p = 0.5 + (w * (pi_a - pi_b)) / (8.0 * pi_max_diff)
+    return float(np.clip(p, 0.0, 1.0))
+
+
+def seasonal_birth_prob(t, period=8000, base=0.50, amp=0.30):
+    # Slow sinusoidal seasonality in [base-amp, base+amp].
+    return base + amp * np.sin(2.0 * np.pi * t / period)
+
+
+def run_q2(
+    T=40_000,
+    s=1.0,
+    w=0.1,
+    mutation_rate=0.0,
+    period=8000,
+    base=0.50,
+    amp=0.30,
+    n0=120,
+    seed=1,
+):
+    rng = np.random.default_rng(seed)
+
+    # Start near mixed equilibrium with finite-size rounding.
+    pop = [R] * (n0 // 3) + [P] * (n0 // 3) + [S] * (n0 - 2 * (n0 // 3))
+
+    rt, pt, st, nt = [], [], [], []
+
+    for t in range(T):
+        n = len(pop)
+        if n < 2:
+            break
+
+        counts = np.bincount(pop, minlength=3)
+        a, b = rng.choice(n, 2, replace=False)
+        strat_a = int(pop[a])
+        strat_b = int(pop[b])
+
+        pi_a = payoff(strat_a, counts, s)
+        pi_b = payoff(strat_b, counts, s)
+
+        pi_max_diff = (n - 1) * (1.0 + s)
+        p_b_to_a = pairwise_probability(pi_a, pi_b, w=w, pi_max_diff=pi_max_diff)
+
+        if rng.random() < seasonal_birth_prob(t, period=period, base=base, amp=amp):
+            # Birth-only event: one strategy replicates, opponent stays alive.
+            parent_idx = a if rng.random() < p_b_to_a else b
+            new_strat = int(pop[parent_idx])
+            if mutation_rate > 0.0 and rng.random() < mutation_rate:
+                new_strat = int(rng.integers(3))
+            pop.append(new_strat)
+        else:
+            # Death-only event: one of the pair is removed.
+            victim_idx = b if rng.random() < p_b_to_a else a
+            pop.pop(victim_idx)
+
+        counts = np.bincount(pop, minlength=3) if pop else np.array([0, 0, 0])
+        rt.append(int(counts[R]))
+        pt.append(int(counts[P]))
+        st.append(int(counts[S]))
+        nt.append(len(pop))
+
+    return np.array(rt), np.array(pt), np.array(st), np.array(nt)
+
+
+def plot_q2(rt, pt, st, nt, name):
+    os.makedirs("results_q2", exist_ok=True)
+    t = np.arange(len(rt))
+
+    total = rt + pt + st + 1e-12
+    r_norm = rt / total
+    p_norm = pt / total
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(t, r_norm, label="R/N")
+    plt.plot(t, p_norm, label="P/N")
+    plt.plot(t, nt / np.max(nt), label="N (scaled)", alpha=0.7)
+    plt.legend()
+    plt.title(name)
+    plt.xlabel("t")
+    plt.ylabel("normalized")
+    plt.tight_layout()
+    plt.savefig(f"results_q2/{name}_timeseries.png", dpi=160)
+    plt.close()
+
+    plt.figure(figsize=(6, 6))
+    plt.plot(r_norm, p_norm, linewidth=1)
+    plt.xlabel("R/N")
+    plt.ylabel("P/N")
+    plt.title(name)
+    plt.tight_layout()
+    plt.savefig(f"results_q2/{name}_phase.png", dpi=160)
+    plt.close()
+
+
+def summarize_q2_variant(
+    name,
+    mutation_rate,
+    n_seeds=10,
+    T=40_000,
+    s=1.0,
+    w=0.1,
+    period=8000,
+    base=0.50,
+    amp=0.30,
+    n0=120,
+):
+    rows = []
+    for seed in range(n_seeds):
+        rt, pt, st, nt = run_q2(
+            T=T,
+            s=s,
+            w=w,
+            mutation_rate=mutation_rate,
+            period=period,
+            base=base,
+            amp=amp,
+            n0=n0,
+            seed=seed,
+        )
+        extinct_steps = int(np.sum((rt == 0) | (pt == 0) | (st == 0)))
+        rows.append(
+            {
+                "variant": name,
+                "seed": seed,
+                "mutation_rate": mutation_rate,
+                "N_min": int(np.min(nt)),
+                "N_max": int(np.max(nt)),
+                "N_last": int(nt[-1]),
+                "N_mean": float(np.mean(nt)),
+                "extinct_steps": extinct_steps,
+            }
+        )
+    return rows
+
+
+def main():
+    os.makedirs("results_q2", exist_ok=True)
+
+    # Coursework baseline: no mutation.
+    rt, pt, st, nt = run_q2(mutation_rate=0.0, seed=1)
+    plot_q2(rt, pt, st, nt, "seasonal_rps_baseline")
+
+    # Optional robustness extension: add rare mutation.
+    rt_m, pt_m, st_m, nt_m = run_q2(mutation_rate=0.01, seed=1)
+    plot_q2(rt_m, pt_m, st_m, nt_m, "seasonal_rps_mutation")
+
+    rows = []
+    rows.extend(summarize_q2_variant("baseline", mutation_rate=0.0))
+    rows.extend(summarize_q2_variant("mutation", mutation_rate=0.01))
+
+    out_csv = "results_q2/q2_summary.csv"
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    print("Saved:", out_csv)
+
+
+if __name__ == "__main__":
+    main()
+"""
+Q3 variant: RPS on a periodic lattice using pairwise local update.
+
+Sources acknowledged:
+- GT_Coursework_March2026_v01.pdf (creative lattice/network extension).
+- Claussen (2016), Chapter 24 (Local Update process context).
+"""
+
+import csv
+import os
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+R, P, S = 0, 1, 2
+
+def payoff_one_vs_one(a, b, s):
+    # payoff to player using strategy a against opponent b
+    # matrix:
+    # R vs P = -s, R vs S = +1
+    if a == R and b == P: return -s
+    if a == R and b == S: return 1
+    if a == P and b == S: return -s
+    if a == P and b == R: return 1
+    if a == S and b == R: return -s
+    if a == S and b == P: return 1
+    return 0
+
+def neighbours(i, j, L):
+    # 4-neighbour von Neumann with periodic boundaries
+    return [((i-1)%L, j), ((i+1)%L, j), (i, (j-1)%L), (i, (j+1)%L)]
+
+def local_payoff(grid, i, j, s):
+    L = grid.shape[0]
+    strat = grid[i, j]
+    total = 0.0
+    for ni, nj in neighbours(i, j, L):
+        total += payoff_one_vs_one(strat, grid[ni, nj], s)
+    return total
+
+
+def pairwise_probability(pi_a, pi_b, w, pi_max_diff):
+    p = 0.5 + (w * (pi_a - pi_b)) / (8.0 * pi_max_diff)
+    return float(np.clip(p, 0.0, 1.0))
+
+def run_lattice(L=30, T=50000, s=1.0, w=0.5, seed=1):
+    rng = np.random.default_rng(seed)
+
+    # start near equilibrium: random with equal probs
+    grid = rng.integers(0, 3, size=(L, L))
+
+    Rt = np.zeros(T+1, dtype=int)
+    Pt = np.zeros(T+1, dtype=int)
+    St = np.zeros(T+1, dtype=int)
+
+    counts = np.bincount(grid.ravel(), minlength=3)
+    Rt[0], Pt[0], St[0] = counts[R], counts[P], counts[S]
+
+    # Local payoff difference bound for degree-4 neighbourhood.
+    pi_max_diff = 4.0 * (1.0 + s)
+
+    for t in range(1, T+1):
+        i = rng.integers(L)
+        j = rng.integers(L)
+
+        # pick a random neighbour as role model
+        ni, nj = neighbours(i, j, L)[rng.integers(4)]
+
+        strat_b = grid[i, j]
+        strat_a = grid[ni, nj]
+
+        pi_b = local_payoff(grid, i, j, s)
+        pi_a = local_payoff(grid, ni, nj, s)
+
+        p = pairwise_probability(pi_a, pi_b, w=w, pi_max_diff=pi_max_diff)
+
+        if strat_a != strat_b and rng.random() < p:
+            grid[i, j] = strat_a
+
+        counts = np.bincount(grid.ravel(), minlength=3)
+        Rt[t], Pt[t], St[t] = counts[R], counts[P], counts[S]
+
+    return Rt, Pt, St, grid
+
+def plot_q3(Rt, Pt, St, grid, name):
+    os.makedirs("results_q3", exist_ok=True)
+
+    t = np.arange(len(Rt))
+    N = Rt[0] + Pt[0] + St[0]
+
+    # time series (proportions)
+    plt.figure(figsize=(10,5))
+    plt.plot(t, Rt/N, label="R proportion")
+    plt.plot(t, Pt/N, label="P proportion")
+    plt.plot(t, St/N, label="S proportion")
+    plt.legend()
+    plt.xlabel("t")
+    plt.ylabel("proportion")
+    plt.title(name)
+    plt.savefig(f"results_q3/{name}_timeseries.png")
+    plt.close()
+
+    # phase plot (R,P)
+    plt.figure(figsize=(6,6))
+    plt.plot(Rt/N, Pt/N)
+    plt.xlabel("R proportion")
+    plt.ylabel("P proportion")
+    plt.title(name)
+    plt.savefig(f"results_q3/{name}_phase.png")
+    plt.close()
+
+    # grid snapshot
+    plt.figure(figsize=(6,6))
+    plt.imshow(grid, interpolation="nearest")
+    plt.title(name + " (final grid state)")
+    plt.savefig(f"results_q3/{name}_grid.png")
+    plt.close()
+
+def summarize_lattice(L=40, T=60000, s=1.0, w=0.5, n_seeds=8):
+    rows = []
+    n = L * L
+    for seed in range(n_seeds):
+        rt, pt, st, _ = run_lattice(L=L, T=T, s=s, w=w, seed=seed)
+        r = rt / n
+        p = pt / n
+        dist = np.sqrt((r - 1.0 / 3.0) ** 2 + (p - 1.0 / 3.0) ** 2)
+        rows.append(
+            {
+                "seed": seed,
+                "L": L,
+                "N": n,
+                "s": s,
+                "w": w,
+                "late_distance_mean": float(np.mean(dist[-5000:])),
+                "final_R": float(r[-1]),
+                "final_P": float(p[-1]),
+                "final_S": float(1.0 - r[-1] - p[-1]),
+            }
+        )
+    return rows
+
+if __name__ == "__main__":
+    Rt, Pt, St, grid = run_lattice(L=40, T=60000, s=1.0, w=0.5, seed=2)
+    plot_q3(Rt, Pt, St, grid, "lattice_rps")
+
+    rows = summarize_lattice()
+    out_csv = "results_q3/lattice_summary.csv"
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    print("Saved:", out_csv)
+"""
+Q3 (creative): RPS on a Watts-Strogatz small-world network.
+
+Sources acknowledged:
+- GT_Coursework_March2026_v01.pdf (creative lattice/network extension).
+- Watts & Strogatz (1998), Nature 393:440-442 (small-world network model).
+- Claussen (2016), Chapter 24 (Local Update pairwise process in finite populations).
+
+Authorship note:
+- This implementation in this repository was prepared by Ameer Alhashemi.
+"""
+
+import csv
+import os
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+R, P, S = 0, 1, 2
+
+
+def payoff_one_vs_one(a, b, s):
+    if a == R and b == P:
+        return -s
+    if a == R and b == S:
+        return 1
+    if a == P and b == S:
+        return -s
+    if a == P and b == R:
+        return 1
+    if a == S and b == R:
+        return -s
+    if a == S and b == P:
+        return 1
+    return 0.0
+
+
+def pairwise_probability(pi_a, pi_b, w, pi_max_diff):
+    p = 0.5 + (w * (pi_a - pi_b)) / (8.0 * pi_max_diff)
+    return float(np.clip(p, 0.0, 1.0))
+
+
+def watts_strogatz_graph(N, k, beta, seed=0):
+    if k % 2 != 0:
+        raise ValueError("k must be even for Watts-Strogatz ring lattice.")
+    rng = np.random.default_rng(seed)
+    adj = [set() for _ in range(N)]
+
+    half = k // 2
+    for i in range(N):
+        for d in range(1, half + 1):
+            j = (i + d) % N
+            adj[i].add(j)
+            adj[j].add(i)
+
+    for i in range(N):
+        for d in range(1, half + 1):
+            j = (i + d) % N
+            if rng.random() < beta:
+                if j in adj[i]:
+                    adj[i].remove(j)
+                    adj[j].remove(i)
+
+                excluded = np.array([i] + list(adj[i]), dtype=int)
+                possible = np.setdiff1d(np.arange(N), excluded, assume_unique=False)
+                if possible.size == 0:
+                    adj[i].add(j)
+                    adj[j].add(i)
+                    continue
+                m = int(rng.choice(possible))
+                adj[i].add(m)
+                adj[m].add(i)
+    return adj
+
+
+def clustering_coefficient(adj):
+    cs = []
+    for i in range(len(adj)):
+        neigh = list(adj[i])
+        d = len(neigh)
+        if d < 2:
+            cs.append(0.0)
+            continue
+        edges_among = 0
+        for idx, u in enumerate(neigh):
+            for v in neigh[idx + 1 :]:
+                if v in adj[u]:
+                    edges_among += 1
+        cs.append(edges_among / (d * (d - 1) / 2))
+    return float(np.mean(cs))
+
+
+def local_payoff(strats, adj, node, s, normalized=True):
+    neigh = adj[node]
+    if not neigh:
+        return 0.0
+
+    a = int(strats[node])
+    total = 0.0
+    for nb in neigh:
+        total += payoff_one_vs_one(a, int(strats[nb]), s)
+
+    if normalized:
+        return total / len(neigh)
+    return total
+
+
+def run_smallworld_rps(
+    N=1600,
+    k=8,
+    beta=0.1,
+    T=60_000,
+    s=1.0,
+    w=0.5,
+    seed=1,
+    normalized_payoff=True,
+):
+    rng = np.random.default_rng(seed)
+    adj = watts_strogatz_graph(N, k, beta, seed=seed)
+    c_coeff = clustering_coefficient(adj)
+
+    strats = rng.integers(0, 3, size=N)
+    rt = np.zeros(T + 1, dtype=int)
+    pt = np.zeros(T + 1, dtype=int)
+    st = np.zeros(T + 1, dtype=int)
+
+    counts = np.bincount(strats, minlength=3)
+    rt[0], pt[0], st[0] = counts[R], counts[P], counts[S]
+
+    # Using normalized payoff removes degree-driven payoff-scale confounds after rewiring.
+    if normalized_payoff:
+        pi_max_diff = 1.0 + s
+    else:
+        pi_max_diff = k * (1.0 + s)
+
+    for t in range(1, T + 1):
+        b = int(rng.integers(N))
+        if not adj[b]:
+            rt[t], pt[t], st[t] = rt[t - 1], pt[t - 1], st[t - 1]
+            continue
+
+        a = int(rng.choice(list(adj[b])))
+        strat_b = int(strats[b])
+        strat_a = int(strats[a])
+
+        pi_b = local_payoff(strats, adj, b, s=s, normalized=normalized_payoff)
+        pi_a = local_payoff(strats, adj, a, s=s, normalized=normalized_payoff)
+        p = pairwise_probability(pi_a, pi_b, w=w, pi_max_diff=pi_max_diff)
+
+        if strat_a != strat_b and rng.random() < p:
+            strats[b] = strat_a
+
+        counts = np.bincount(strats, minlength=3)
+        rt[t], pt[t], st[t] = counts[R], counts[P], counts[S]
+
+    return rt, pt, st, c_coeff
+
+
+def plot_outputs(rt, pt, st, title, outdir="results_q3_sw"):
+    os.makedirs(outdir, exist_ok=True)
+    t = np.arange(len(rt))
+    n = rt[0] + pt[0] + st[0]
+    r = rt / n
+    p = pt / n
+    s = st / n
+
+    plt.figure(figsize=(10, 5))
+    plt.plot(t, r, label="R/N")
+    plt.plot(t, p, label="P/N")
+    plt.plot(t, s, label="S/N")
+    plt.xlabel("t")
+    plt.ylabel("proportion")
+    plt.title(title)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(os.path.join(outdir, f"{title}_timeseries.png"), dpi=160)
+    plt.close()
+
+    plt.figure(figsize=(6, 6))
+    plt.plot(r, p, linewidth=1)
+    plt.xlabel("R/N")
+    plt.ylabel("P/N")
+    plt.title(title)
+    plt.tight_layout()
+    plt.savefig(os.path.join(outdir, f"{title}_phase.png"), dpi=160)
+    plt.close()
+
+
+def summarize_smallworld(
+    N=1600,
+    k=8,
+    T=20_000,
+    s=1.0,
+    w=0.5,
+    betas=(0.0, 0.1, 0.5),
+    n_seeds=8,
+    normalized_payoff=True,
+):
+    rows = []
+    for beta in betas:
+        for seed in range(n_seeds):
+            rt, pt, st, c_coeff = run_smallworld_rps(
+                N=N,
+                k=k,
+                beta=beta,
+                T=T,
+                s=s,
+                w=w,
+                seed=seed,
+                normalized_payoff=normalized_payoff,
+            )
+            n = rt[0] + pt[0] + st[0]
+            r = rt / n
+            p = pt / n
+            dist = np.sqrt((r - 1.0 / 3.0) ** 2 + (p - 1.0 / 3.0) ** 2)
+            rows.append(
+                {
+                    "beta": beta,
+                    "seed": seed,
+                    "C": float(c_coeff),
+                    "late_distance_mean": float(np.mean(dist[-5000:])),
+                    "final_R": float(r[-1]),
+                    "final_P": float(p[-1]),
+                    "final_S": float(1.0 - r[-1] - p[-1]),
+                    "normalized_payoff": normalized_payoff,
+                }
+            )
+    return rows
+
+
+def main():
+    N = 40 * 40
+    k = 8
+    T = 60_000
+    s = 1.0
+    w = 0.5
+    seed = 2
+
+    for beta in [0.0, 0.1, 0.5]:
+        rt, pt, st, c_coeff = run_smallworld_rps(
+            N=N, k=k, beta=beta, T=T, s=s, w=w, seed=seed, normalized_payoff=True
+        )
+        title = f"sw_N{N}_k{k}_beta{beta}_C{c_coeff:.2f}_s{s}_w{w}"
+        print("Saved:", title)
+        plot_outputs(rt, pt, st, title)
+
+    rows = summarize_smallworld(N=N, k=k)
+    out_csv = "results_q3_sw/q3_sw_summary.csv"
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    print("Saved:", out_csv)
+
+
+if __name__ == "__main__":
+    main()

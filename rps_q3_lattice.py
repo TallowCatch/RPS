@@ -1,6 +1,16 @@
-import numpy as np
-import matplotlib.pyplot as plt
+"""
+Q3 variant: RPS on a periodic lattice using pairwise local update.
+
+Sources acknowledged:
+- GT_Coursework_March2026_v01.pdf (creative lattice/network extension).
+- Claussen (2016), Chapter 24 (Local Update process context).
+"""
+
+import csv
 import os
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 R, P, S = 0, 1, 2
 
@@ -28,6 +38,11 @@ def local_payoff(grid, i, j, s):
         total += payoff_one_vs_one(strat, grid[ni, nj], s)
     return total
 
+
+def pairwise_probability(pi_a, pi_b, w, pi_max_diff):
+    p = 0.5 + (w * (pi_a - pi_b)) / (8.0 * pi_max_diff)
+    return float(np.clip(p, 0.0, 1.0))
+
 def run_lattice(L=30, T=50000, s=1.0, w=0.5, seed=1):
     rng = np.random.default_rng(seed)
 
@@ -41,8 +56,8 @@ def run_lattice(L=30, T=50000, s=1.0, w=0.5, seed=1):
     counts = np.bincount(grid.ravel(), minlength=3)
     Rt[0], Pt[0], St[0] = counts[R], counts[P], counts[S]
 
-    # local max payoff magnitude: each neighbour gives at most max(1,s)
-    pi_max = 4 * max(1.0, s)
+    # Local payoff difference bound for degree-4 neighbourhood.
+    pi_max_diff = 4.0 * (1.0 + s)
 
     for t in range(1, T+1):
         i = rng.integers(L)
@@ -57,8 +72,7 @@ def run_lattice(L=30, T=50000, s=1.0, w=0.5, seed=1):
         pi_b = local_payoff(grid, i, j, s)
         pi_a = local_payoff(grid, ni, nj, s)
 
-        p = 0.5 + (w * (pi_a - pi_b)) / (8.0 * pi_max)
-        p = np.clip(p, 0, 1)
+        p = pairwise_probability(pi_a, pi_b, w=w, pi_max_diff=pi_max_diff)
 
         if strat_a != strat_b and rng.random() < p:
             grid[i, j] = strat_a
@@ -102,6 +116,37 @@ def plot_q3(Rt, Pt, St, grid, name):
     plt.savefig(f"results_q3/{name}_grid.png")
     plt.close()
 
+def summarize_lattice(L=40, T=60000, s=1.0, w=0.5, n_seeds=8):
+    rows = []
+    n = L * L
+    for seed in range(n_seeds):
+        rt, pt, st, _ = run_lattice(L=L, T=T, s=s, w=w, seed=seed)
+        r = rt / n
+        p = pt / n
+        dist = np.sqrt((r - 1.0 / 3.0) ** 2 + (p - 1.0 / 3.0) ** 2)
+        rows.append(
+            {
+                "seed": seed,
+                "L": L,
+                "N": n,
+                "s": s,
+                "w": w,
+                "late_distance_mean": float(np.mean(dist[-5000:])),
+                "final_R": float(r[-1]),
+                "final_P": float(p[-1]),
+                "final_S": float(1.0 - r[-1] - p[-1]),
+            }
+        )
+    return rows
+
 if __name__ == "__main__":
     Rt, Pt, St, grid = run_lattice(L=40, T=60000, s=1.0, w=0.5, seed=2)
     plot_q3(Rt, Pt, St, grid, "lattice_rps")
+
+    rows = summarize_lattice()
+    out_csv = "results_q3/lattice_summary.csv"
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(rows)
+    print("Saved:", out_csv)
