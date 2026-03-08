@@ -120,6 +120,8 @@ Question 2 uses demographic spread and composition risk metrics. I report $N_{\m
 
 Question 3 uses late-time distance, final composition, and clustering. On the lattice, the objective is to characterize finite-size variability under strictly local interactions. On small-world graphs, the objective is to quantify how rewiring and clustering alter displacement from the mixed state.
 
+To strengthen interpretation without changing the scope of the project, I also report selected nonparametric bootstrap percentile intervals from seed-level resampling. These use 20{,}000 resamples with a fixed random seed and are only applied to a small set of summary quantities that drive the main conclusions. The purpose is descriptive uncertainty checking rather than formal hypothesis testing.
+
 \section{Results}
 \subsection{Question 1: Fixed-size Local Update sweep}
 Table~\ref{tab:q1} reports the full parameter grid. Figure~\ref{fig:q1-summary} shows the extinction-time landscape and seed-level spread. Figure~\ref{fig:q1-trend} merges the two main parameter summaries into one combined view with $s$ on the horizontal axis and $w$ shown as the secondary grouping.
@@ -168,7 +170,7 @@ $s$ & $w$ & Median extinction time & Edge-contact fraction & Mean late $d$ \\
 \caption{Question 1 combined parameter diagnostics.}
 \label{fig:q1-trend}
 \end{figure}
-\vspace{-1.6em}
+\vspace{0.2em}
 
 \begin{figure}[H]
 \centering
@@ -206,6 +208,7 @@ For the higher loss severity setting, the median extinction times remain in a na
 
 \subsubsection*{Cross-setting interpretation}
 The highest median extinction time appears at $(s,w)=(0.8,1.0)$, while the lowest appears at $(s,w)=(1.0,0.5)$. This gap is large enough to show that no single scalar setting of $s$ or $w$ can be called globally more stable. The combined figure is drawn against $s$ because $s$ is the cleaner organizing axis in this grid, while the effect of $w$ is real but changes across parameter regimes rather than acting as one monotone control.
+The bootstrap uncertainty checks in Table~\ref{tab:uncertainty} keep the high-persistence setting centered clearly above the lowest-persistence setting, which supports this ranking while still showing substantial finite-population spread.
 
 \subsection{Question 2: Seasonal demography with separate birth and death}
 Question 2 keeps the same game but changes event structure and allows variable population size. Table~\ref{tab:q2} shows that this model meets the intended forcing regime. Mean $N_{\min}=50.1$ and mean $N_{\max}=1792.5$ confirm a strong demographic cycle. Mean near-edge exposure is 0.1163, and the mean minimum strategy share is 0.0529.
@@ -243,6 +246,7 @@ $N_{\min}$ & $N_{\max}$ & $\bar N$ & $N_{\text{last}}$ & Near-edge fraction & Me
 The seed-level spread is important in this part. Near-edge fraction ranges from 0 to 0.8006 across seeds, so exposure is highly heterogeneous even under the same parameters. Several runs reach $N_{\min}=1$ and end with $N_{\text{last}}=1$, while other runs remain far from collapse. This confirms that demographic forcing creates windows of very high vulnerability in finite populations.
 
 Compared with Question 1, the interpretation changes. In fixed $N$ runs, first-extinction time is a direct stability proxy. In variable $N$ runs, temporary absence and recovery can happen repeatedly, so persistence must be judged through exposure over time and not only through one event timestamp. The average correlation Corr$(N,d)=0.0608$ is small, which means displacement cannot be read from population size alone.
+The interval checks in Table~\ref{tab:uncertainty} are consistent with that interpretation. Mean late distance stays well above zero, but the near-edge interval is wide, which matches the seed-level evidence that demographic risk is real and highly heterogeneous rather than uniform across runs.
 
 \subsection{Question 3: Lattice extension and network comparison}
 The creative extension keeps Local Update and changes only interaction structure. The lattice model is kept as the main extension, and the small-world analysis is used as a structural comparison under the same update logic. This choice is grounded in the spatial evolutionary-game literature. Reviews of games on graphs emphasize that topology can alter fixation, clustering, and coexistence behavior even when the payoff matrix is unchanged \cite{szabo2007}. For cyclic-dominance systems more specifically, local spatial interactions are known to support persistent pattern formation and biodiversity, while stronger effective mixing can weaken that stabilizing role \cite{reichenbach2007,varga2014}. The small-world comparison therefore has a clear literature motivation rather than being only a technical add-on.
@@ -320,11 +324,33 @@ $\beta$ & Mean clustering $C$ & Mean late $d$ with std & Mean final $(R,P,S)$ \\
 \label{fig:q3-sw}
 \end{figure}
 \vspace{-0.35em}
-\enlargethispage{2\baselineskip}
 
 The small-world comparison shows a clear gradient: clustering falls as rewiring increases, while mean late distance rises from 0.0322 to 0.0580. The largest variability appears at $\beta=0.5$, where the late-distance standard deviation reaches 0.0368. This indicates that high rewiring increases both displacement and seed sensitivity. That interpretation is consistent with graph-based evolutionary-game results in which increased long-range connectivity changes local shielding and makes the process behave more like a mixed interaction system \cite{watts1998,szabo2007}.
+The bootstrap intervals in Table~\ref{tab:uncertainty} support the same ordering at the level of mean late distance. At the same time, they remain wide enough that the $\beta=0$ to $\beta=0.5$ shift should still be read as a trend estimate from eight seeds per level rather than a fully resolved significance claim.
 
 Compared with Questions 1 and 2, the extension highlights a different control variable. In Question 1, outcomes were mainly shaped by payoff and selection parameters. In Question 2, outcomes were strongly shaped by demographic forcing. In Question 3, outcomes are shaped by who interacts with whom, even under the same strategic rule.
+
+\begin{table}[!htbp]
+\centering
+\small
+\caption{Selected 95\% bootstrap confidence intervals from seed-level resampling.}
+\label{tab:uncertainty}
+\begin{tabular}{p{0.48\textwidth}cc}
+\toprule
+Quantity & Estimate & 95\% CI \\
+\midrule
+Q1 median extinction, $(s,w)=(0.8,1.0)$ & 16848 & [13788, 21854] \\
+Q1 median extinction, $(s,w)=(1.0,0.5)$ & 8426 & [5509.5, 12153.0] \\
+Q2 mean late $d$ & 0.2831 & [0.2002, 0.4015] \\
+Q2 mean near-edge fraction & 0.1163 & [0.0025, 0.2787] \\
+Q3 lattice mean late $d$ & 0.0836 & [0.0639, 0.1033] \\
+Q3 small-world mean late $d$, $\beta=0.0$ & 0.0322 & [0.0185, 0.0474] \\
+Q3 small-world mean late $d$, $\beta=0.5$ & 0.0580 & [0.0342, 0.0850] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\clearpage
 
 \section{Integrated Interpretation}
 Taken together, the three questions show that coexistence in finite populations is conditional and mechanism-dependent. The fixed-size sweep demonstrates that parameter effects are not globally monotonic, so interpretation must be based on distributions rather than single trajectories. The seasonal model demonstrates that demographic forcing changes what stability evidence is meaningful, because temporary strategy loss can appear without immediate terminal collapse. The structural extension demonstrates that network organization can shift both average displacement and variability even when the update rule is unchanged.
@@ -332,7 +358,7 @@ Taken together, the three questions show that coexistence in finite populations 
 The most consistent pattern across all parts is that no single metric is sufficient. Extinction timing, edge-contact exposure, late-time displacement, and structural summaries each reveal a different aspect of finite-population behavior. The report therefore treats claims as multi-metric and comparative, which is closer to how these stochastic systems should be evaluated in practice.
 
 \section{Critical Reflection}
-The analysis is stronger than a trajectory-only writeup, but several limits remain and affect interpretation. The first limit is finite horizon dependence because metrics such as late-time means and first-extinction times can shift when the observation window changes. The second limit is parameter scope because the chosen values for $s$, $w$, and seasonal forcing are informative but still represent only one region of the model space. The third limit is inferential scope because the study reports descriptive seed statistics and not formal confidence intervals or hypothesis tests. The fourth limit is model scope because Local Update is only one evolutionary rule, so broader conclusions about cyclic dominance would need direct replication under alternative rules. Even with these limits, the central comparisons are internally consistent, reproducible from the scripts, and supported by repeated-seed evidence rather than isolated runs.
+The analysis is stronger than a trajectory-only writeup, but several limits remain and affect interpretation. The first limit is finite horizon dependence because metrics such as late-time means and first-extinction times can shift when the observation window changes. The second limit is parameter scope because the chosen values for $s$, $w$, and seasonal forcing are informative but still represent only one region of the model space. The third limit is inferential scope because, although selected bootstrap confidence intervals are now reported for key summaries, the study still does not perform formal hypothesis tests or exhaustive uncertainty analysis across the full parameter space. The fourth limit is model scope because Local Update is only one evolutionary rule, so broader conclusions about cyclic dominance would need direct replication under alternative rules. Even with these limits, the central comparisons are internally consistent, reproducible from the scripts, and supported by repeated-seed evidence rather than isolated runs.
 
 \section{Conclusion}
 This report provides a complete finite-population RPS analysis across three linked models with one consistent strategic core. Question 1 shows that stability claims depend on which statistic is used and cannot be reduced to one trajectory. Question 2 shows that seasonal demography creates strong risk heterogeneity and changes how persistence should be measured. Question 3 shows that interaction structure alone can shift both displacement and variability while preserving the same game and update process. The overall takeaway is that credible conclusions in finite-population evolutionary dynamics require explicit comparisons, repeated seeds, and metric choices that match the mechanism under study.

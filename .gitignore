@@ -1,0 +1,10 @@
+.DS_Store
+.mplconfig/
+
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+
+_tmp_coursework.pdf
