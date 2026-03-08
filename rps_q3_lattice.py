@@ -2,8 +2,11 @@
 Q3 variant: RPS on a periodic lattice using pairwise local update.
 
 Sources acknowledged:
-- GT_Coursework_March2026_v01.pdf (creative lattice/network extension).
+- Module brief for March 2026 (creative lattice/network extension).
 - Claussen (2016), Chapter 24 (Local Update process context).
+
+Authorship note:
+- This implementation in this repository was prepared by Ameer Alhashemi.
 """
 
 import csv
@@ -13,6 +16,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 R, P, S = 0, 1, 2
+
+plt.rcParams.update(
+    {
+        "font.size": 12,
+        "axes.titlesize": 13,
+        "axes.labelsize": 12,
+        "xtick.labelsize": 11,
+        "ytick.labelsize": 11,
+        "legend.fontsize": 10,
+    }
+)
 
 def payoff_one_vs_one(a, b, s):
     # payoff to player using strategy a against opponent b
@@ -42,6 +56,14 @@ def local_payoff(grid, i, j, s):
 def pairwise_probability(pi_a, pi_b, w, pi_max_diff):
     p = 0.5 + (w * (pi_a - pi_b)) / (8.0 * pi_max_diff)
     return float(np.clip(p, 0.0, 1.0))
+
+
+def distance_to_mixed(rt, pt, st):
+    n = rt + pt + st + 1e-12
+    r = rt / n
+    p = pt / n
+    return np.sqrt((r - 1.0 / 3.0) ** 2 + (p - 1.0 / 3.0) ** 2)
+
 
 def run_lattice(L=30, T=50000, s=1.0, w=0.5, seed=1):
     rng = np.random.default_rng(seed)
@@ -76,8 +98,9 @@ def run_lattice(L=30, T=50000, s=1.0, w=0.5, seed=1):
 
         if strat_a != strat_b and rng.random() < p:
             grid[i, j] = strat_a
+            counts[strat_b] -= 1
+            counts[strat_a] += 1
 
-        counts = np.bincount(grid.ravel(), minlength=3)
         Rt[t], Pt[t], St[t] = counts[R], counts[P], counts[S]
 
     return Rt, Pt, St, grid
@@ -89,31 +112,38 @@ def plot_q3(Rt, Pt, St, grid, name):
     N = Rt[0] + Pt[0] + St[0]
 
     # time series (proportions)
-    plt.figure(figsize=(10,5))
+    plt.figure(figsize=(10.8, 5.2))
     plt.plot(t, Rt/N, label="R proportion")
     plt.plot(t, Pt/N, label="P proportion")
     plt.plot(t, St/N, label="S proportion")
     plt.legend()
     plt.xlabel("t")
     plt.ylabel("proportion")
-    plt.title(name)
     plt.savefig(f"results_q3/{name}_timeseries.png")
     plt.close()
 
     # phase plot (R,P)
-    plt.figure(figsize=(6,6))
+    plt.figure(figsize=(6.5, 6.2))
     plt.plot(Rt/N, Pt/N)
     plt.xlabel("R proportion")
     plt.ylabel("P proportion")
-    plt.title(name)
     plt.savefig(f"results_q3/{name}_phase.png")
     plt.close()
 
     # grid snapshot
-    plt.figure(figsize=(6,6))
+    plt.figure(figsize=(6.5, 6.2))
     plt.imshow(grid, interpolation="nearest")
-    plt.title(name + " (final grid state)")
     plt.savefig(f"results_q3/{name}_grid.png")
+    plt.close()
+
+    # distance to mixed point
+    dist = distance_to_mixed(Rt, Pt, St)
+    plt.figure(figsize=(9.8, 4.6))
+    plt.plot(t, dist)
+    plt.xlabel("t")
+    plt.ylabel("distance d(t) to mixed state")
+    plt.tight_layout()
+    plt.savefig(f"results_q3/{name}_distance.png")
     plt.close()
 
 def summarize_lattice(L=40, T=60000, s=1.0, w=0.5, n_seeds=8):
@@ -139,6 +169,28 @@ def summarize_lattice(L=40, T=60000, s=1.0, w=0.5, n_seeds=8):
         )
     return rows
 
+
+def plot_lattice_seed_summary(rows, outdir="results_q3"):
+    os.makedirs(outdir, exist_ok=True)
+
+    dvals = [float(r["late_distance_mean"]) for r in rows]
+    rvals = [float(r["final_R"]) for r in rows]
+    pvals = [float(r["final_P"]) for r in rows]
+
+    fig, axes = plt.subplots(1, 2, figsize=(10.8, 4.8))
+    axes[0].boxplot([dvals], tick_labels=["late distance"])
+    axes[0].set_ylabel("distance to mixed point")
+
+    axes[1].scatter(rvals, pvals, alpha=0.85)
+    axes[1].set_xlabel("final R share")
+    axes[1].set_ylabel("final P share")
+    axes[1].grid(alpha=0.2)
+
+    plt.tight_layout()
+    plt.savefig(os.path.join(outdir, "lattice_seed_summary.png"), dpi=160)
+    plt.close(fig)
+
+
 if __name__ == "__main__":
     Rt, Pt, St, grid = run_lattice(L=40, T=60000, s=1.0, w=0.5, seed=2)
     plot_q3(Rt, Pt, St, grid, "lattice_rps")
@@ -150,3 +202,4 @@ if __name__ == "__main__":
         writer.writeheader()
         writer.writerows(rows)
     print("Saved:", out_csv)
+    plot_lattice_seed_summary(rows)

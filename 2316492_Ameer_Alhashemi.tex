@@ -1,6 +1,6 @@
 \documentclass[11pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
-\usepackage{amsmath, amssymb}
+\usepackage{amsmath,amssymb}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{float}
@@ -8,213 +8,337 @@
 \usepackage{subcaption}
 \usepackage{setspace}
 
-\hypersetup{
-  colorlinks=true,
-  linkcolor=blue,
-  citecolor=blue,
-  urlcolor=blue
-}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+\setlength{\textfloatsep}{6pt plus 1pt minus 1pt}
+\setlength{\floatsep}{5pt plus 1pt minus 1pt}
+\setlength{\intextsep}{5pt plus 1pt minus 1pt}
+\newlength{\panelimgheight}
+\setlength{\panelimgheight}{0.17\textheight}
+\setlength{\abovecaptionskip}{3pt}
+\setlength{\belowcaptionskip}{0pt}
 
 \title{Finite-Population Rock--Paper--Scissors Dynamics}
 \author{Ameer Alhashemi (2316492)}
 \date{\today}
 
 \begin{document}
+\raggedbottom
 \maketitle
 \onehalfspacing
 
 \begin{abstract}
-In this report I implement and analyse a finite-population non-zero-sum Rock--Paper--Scissors (RPS) model using pairwise comparison (Local Update), a seasonal birth-only/death-only extension with fluctuating population size, and a creative network-based extension on a Watts--Strogatz small-world graph. For Question 1, I compare $s\in\{0.8,1.0,1.2\}$ and $w\in\{0.1,0.5,1.0\}$ with multi-seed summary statistics. For Question 2, I show that a slow seasonal forcing of birth probability produces large oscillatory fluctuations in $N(t)$ and I compare a baseline model to a mutation-robustness variant. For Question 3, I compare lattice and small-world dynamics and quantify how rewiring probability (hence clustering) affects coexistence drift. I discuss the results critically in relation to finite-size stochastic effects and established literature.
+This report studies finite-population non-zero-sum RPS dynamics through three connected simulation models. The first model is a well-mixed fixed-size population with Local Update pairwise comparison and explicit parameter sweeps. The second model keeps the same strategic interaction but replaces strategy-switching events with separate birth-only and death-only events, then drives the birth probability with a slow seasonal signal so population size fluctuates strongly over time. The third model moves the interaction process to spatial and network structures and compares periodic lattice behavior with a rewired small-world graph. The analysis is designed to be statistical rather than anecdotal. Every main claim is tied to repeated-seed metrics, distributional summaries, and direct comparisons across models. The most important conclusion is that stability in finite populations is not a single property. It changes with update mechanism, interaction topology, and demographic coupling.
 \end{abstract}
 
 \section{Introduction}
-Evolutionary game dynamics connects strategic interactions to stochastic population processes in finite systems. The required baseline here is a non-zero-sum RPS game under pairwise comparison (Local Update), where two agents are sampled and one may adopt the other's strategy with a probability increasing in payoff difference \cite{claussen2016,traulsen2006}. The assignment then asks for a model with separate birth and death events under seasonal forcing, and one creative extension (here: spatial/network interactions).
+Finite-population evolutionary dynamics often diverges from deterministic intuition. In deterministic replicator settings the mixed state can be read directly from phase geometry. In finite populations the same state is influenced by random sampling effects, and those effects do not average out quickly when trajectories move near boundaries. The practical consequence is simple. A single trajectory can look convincing while still being non-representative.
 
-The payoff matrix used throughout is
+The model class used here follows pairwise comparison Local Update dynamics from the finite-population literature \cite{claussen2016,traulsen2006,nowak2006,claussen2007}. I use the same core game and update philosophy in all three parts so each extension isolates one specific modeling change. This makes interpretation cleaner because observed differences can be linked to demography or structure rather than to a complete change of strategic mechanism.
+
+\section{Model Formulation}
+The payoff matrix is
 \begin{equation}
-A =
-\begin{pmatrix}
+A=\begin{pmatrix}
 0 & -s & 1 \\
 1 & 0 & -s \\
 -s & 1 & 0
 \end{pmatrix},
 \end{equation}
-with $s>0$ controlling asymmetry and stability properties around the mixed state.
-
-\section{Methods}
-\subsection{Q1: Pairwise comparison in finite populations}
-Population size is fixed at $N=150$. At each step, two distinct agents $A$ and $B$ are sampled uniformly. Each receives payoff against all other agents in the well-mixed population, and $B$ adopts $A$ with probability
+where $s$ controls loss severity relative to gains. Local Update pairwise comparison is implemented through
 \begin{equation}
-p_{B\rightarrow A}
-=
-\frac{1}{2}
-+
-\frac{w(\pi_A-\pi_B)}{8\pi_{\max}},
+p_{B\to A}=\frac{1}{2}+\frac{w(\pi_A-\pi_B)}{8\pi_{\max}}.
 \end{equation}
-matching the Local Update form \cite{claussen2016}. I used
+In the well-mixed finite population I use
 \begin{equation}
 \pi_{\max}=(N-1)(1+s),
 \end{equation}
-as a bound on maximal possible payoff difference for this game. Initial conditions are near mixed equilibrium ($R,P,S$ approximately equal). I ran $T=30000$ steps for each parameter pair and used 20 random seeds for summary statistics. Required figures are generated as $R(t),P(t)$ time series and $(R,P)$ phase projections.
+which is a conservative bound on payoff differences for this game.
 
-\subsection{Q2: Seasonal birth-only/death-only process}
-To allow fluctuating population size, each step performs exactly one event:
-\begin{itemize}
-\item Birth-only event (probability $b(t)$): one sampled strategy replicates; opponent stays alive.
-\item Death-only event (probability $1-b(t)$): one sampled agent dies.
-\end{itemize}
-The same pairwise comparison probability determines which sampled strategy is favored in birth or death selection. Seasonality is
-\begin{equation}
-b(t)=b_0 + a\sin(2\pi t/T_{\text{season}})
-\end{equation}
-with $b_0=0.50$, $a=0.30$, $T_{\text{season}}=8000$. I report:
-\begin{enumerate}
-\item baseline (no mutation),
-\item robustness extension ($\mu=0.01$ mutation on birth).
-\end{enumerate}
-Plots show $R/N$, $P/N$, and scaled $N(t)$.
+This structure keeps the update probability in a valid range once clipped numerically to $[0,1]$. The weak-selection interpretation is preserved by scaling differences through $w$ and by normalizing with a finite payoff bound. The point of this scaling is not merely numerical safety. It also keeps parameter interpretation consistent across sweeps.
 
-\subsection{Q3: Creative extension (lattice and small-world)}
-I implemented two spatial/network variants:
-\begin{enumerate}
-\item 2D periodic lattice (von Neumann neighborhood, degree 4);
-\item Watts--Strogatz small-world network with degree $k=8$ and rewiring $\beta\in\{0,0.1,0.5\}$ \cite{watts1998}.
-\end{enumerate}
-Update is again pairwise Local Update on links. For network comparability across rewiring levels, payoffs are degree-normalized (average payoff per neighbor) so observed effects are less confounded by degree heterogeneity. I measured clustering coefficient $C$ and late-time distance to mixed point
+\begin{figure}[!htbp]
+\centering
+\caption{Algorithm 1: Pairwise Comparison Local Update}
+\begin{minipage}{0.92\textwidth}
+\small
+\textbf{Input:} current population state, payoff parameter $s$, selection intensity $w$.\\
+1. Sample two distinct agents $A$ and $B$ uniformly at random.\\
+2. Compute payoffs $\pi_A$ and $\pi_B$ against all current opponents.\\
+3. Compute $p_{B\to A}=\frac{1}{2}+\frac{w(\pi_A-\pi_B)}{8\pi_{\max}}$.\\
+4. Clip $p_{B\to A}$ to $[0,1]$.\\
+5. With probability $p_{B\to A}$, replace $B$'s strategy with $A$'s strategy.\\
+6. Update strategy counts and advance one simulation step.
+\end{minipage}
+\end{figure}
+
+\section{Experimental Setup and Method}
+The three parts are designed as one controlled sequence. I keep the same game and update logic, then introduce one modeling change at a time. This is important for interpretation because it avoids mixing several causes in the same comparison. Every run starts near the mixed state so early transients are comparable across parts.
+
+For Question 1, I use a fixed-size well-mixed population with $N=150$ and horizon $T=30000$. I sweep
+\begin{equation*}
+s\in\{0.8,1.0,1.2\},\quad w\in\{0.1,0.5,1.0\},
+\end{equation*}
+with 20 seeds for each pair. This gives nine parameter settings and 180 total runs. The design goal is to see both how payoff asymmetry changes drift pressure and how selection intensity changes adaptation speed.
+
+For Question 2, strategy switching is replaced by separate birth-only and death-only events. Birth probability is
 \begin{equation}
-d(t)=\sqrt{(R/N-1/3)^2+(P/N-1/3)^2}.
+b(t)=b_0+a\sin\left(\frac{2\pi t}{T_{\text{season}}}\right),
 \end{equation}
+with $b_0=0.50$, $a=0.30$, and $T_{\text{season}}=8000$. I use $T=40000$ and 10 seeds. This forcing creates repeated low-$N$ and high-$N$ windows by construction, so the main question becomes whether composition remains near the mixed state during strong demographic expansion and contraction.
+
+For Question 3, I keep Local Update and change interaction structure. The first extension is a periodic lattice with von Neumann neighborhood. The second extension is a Watts--Strogatz graph with degree eight and rewiring levels $\beta\in\{0,0.1,0.5\}$ \cite{watts1998,szabo2007,reichenbach2007,varga2014}. In the small-world model payoff is normalized by local degree so rewiring comparisons reflect topology and not payoff scale artifacts.
+
+\section{Evaluation Strategy}
+The main composition diagnostic is distance from the mixed point:
+\begin{equation}
+d(t)=\sqrt{\left(\frac{R(t)}{N(t)}-\frac{1}{3}\right)^2+\left(\frac{P(t)}{N(t)}-\frac{1}{3}\right)^2}.
+\label{eq:distance}
+\end{equation}
+This scalar summary lets me compare sustained displacement across parts even when trajectories have different visual shapes. For each run I use late-time means of $d(t)$ to focus on long-horizon behavior.
+
+\subsection*{Theoretical benchmark}
+As an infinite-population baseline, the corresponding replicator system is
+\begin{equation}
+\dot x_i = x_i\big((Ax)_i - x^\top A x\big),\qquad i\in\{R,P,S\},
+\end{equation}
+with $x_R+x_P+x_S=1$ \cite{nowak2006,hofbauer1998}. The interior equilibrium is
+$x^*=(1/3,1/3,1/3)$. For this payoff family, the expected local behavior is inward
+flow for $s<1$, neutral cycling around $x^*$ for $s=1$, and outward flow for
+$s>1$. Figure~\ref{fig:theory-replicator} shows this deterministic phase-portrait
+benchmark and provides context for interpreting finite-population stochastic outcomes.
+
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{results/theory_replicator_phase.png}
+\caption{Replicator benchmark in the $(R,P)$ projection for $s=0.8,1.0,1.2$.}
+\label{fig:theory-replicator}
+\end{figure}
+
+Question 1 uses first-extinction time and edge-contact frequency. First-extinction time captures how long all three strategies coexist before one share hits zero. Edge-contact frequency reports how often runs hit an absorbing boundary before the horizon. This gives a clearer picture than reporting only one seed trajectory.
+
+Question 2 uses demographic spread and composition risk metrics. I report $N_{\min}$, $N_{\max}$, $\bar N$, and $N_{\text{last}}$, together with near-edge exposure and distance statistics. I also compute the seed-level correlation between $N(t)$ and $d(t)$ to check whether demographic contraction is systematically associated with displacement.
+
+Question 3 uses late-time distance, final composition, and clustering. On the lattice, the objective is to characterize finite-size variability under strictly local interactions. On small-world graphs, the objective is to quantify how rewiring and clustering alter displacement from the mixed state.
 
 \section{Results}
-\subsection{Q1 parameter comparison}
-Table~\ref{tab:q1} summarizes median extinction times (first time at least one strategy count hits zero), which is a practical finite-population stability proxy.
+\subsection{Question 1: Fixed-size Local Update sweep}
+Table~\ref{tab:q1} reports the full parameter grid. Figure~\ref{fig:q1-summary} shows the extinction-time landscape and seed-level spread. Figure~\ref{fig:q1-trend} merges the two main parameter summaries into one combined view with $s$ on the horizontal axis and $w$ shown as the secondary grouping.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\caption{Q1 summary over 20 seeds per parameter pair ($N=150$, $T=30000$).}
+\caption{Question 1 summary over 20 seeds per parameter pair.}
 \label{tab:q1}
-\begin{tabular}{cccc}
-\toprule
-$s$ & $w$ & Median first-extinction time & Mean first-extinction time \\
-\midrule
-0.8 & 0.1 & 9069.0 & 11234.6 \\
-0.8 & 0.5 & 11194.5 & 12487.8 \\
-0.8 & 1.0 & 16848.0 & 17911.1 \\
-1.0 & 0.1 & 10534.5 & 11868.0 \\
-1.0 & 0.5 & 8426.0 & 9609.7 \\
-1.0 & 1.0 & 12563.5 & 12806.6 \\
-1.2 & 0.1 & 10534.5 & 11352.6 \\
-1.2 & 0.5 & 10206.5 & 10883.6 \\
-1.2 & 1.0 & 11383.5 & 12395.3 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Observed dependence on $w$ and $s$ is non-monotone in finite populations, consistent with strong stochastic effects and trajectory variability. A single-seed interpretation would be misleading; multi-seed statistics are necessary.
-
-\begin{figure}[H]
-\centering
-\begin{subfigure}[t]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{results/N150_s0.8_w0.5_timeseries.png}
-  \caption{$s=0.8,\;w=0.5$}
-\end{subfigure}
-\hfill
-\begin{subfigure}[t]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{results/N150_s1.0_w0.5_timeseries.png}
-  \caption{$s=1.0,\;w=0.5$}
-\end{subfigure}
-\caption{Representative Q1 time series (single seed, used only as trajectory examples).}
-\label{fig:q1-timeseries}
-\end{figure}
-
-\subsection{Q2 seasonal fluctuating population}
-Table~\ref{tab:q2} shows strong fluctuation between small and large $N$ in both variants.
-
-\begin{table}[H]
-\centering
-\caption{Q2 means over 10 seeds per variant ($T=40000$).}
-\label{tab:q2}
-\begin{tabular}{lccccc}
-\toprule
-Variant & Mean $N_{\min}$ & Mean $N_{\max}$ & Mean $\bar N$ & Mean $N_{\text{last}}$ & Mean extinct-steps \\
-\midrule
-Baseline ($\mu=0$) & 50.1 & 1792.5 & 927.8 & 186.4 & 4031.8 \\
-Mutation ($\mu=0.01$) & 54.5 & 1763.1 & 907.6 & 180.1 & 704.5 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Mutation substantially reduces extinction episodes but does not remove large $N$ oscillations. Thus, the seasonal birth/death forcing is the dominant driver of population-size fluctuations.
-
-\begin{figure}[H]
-\centering
-\begin{subfigure}[t]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{results_q2/seasonal_rps_baseline_timeseries.png}
-  \caption{Baseline ($\mu=0$)}
-\end{subfigure}
-\hfill
-\begin{subfigure}[t]{0.48\textwidth}
-  \includegraphics[width=\textwidth]{results_q2/seasonal_rps_mutation_timeseries.png}
-  \caption{Mutation extension ($\mu=0.01$)}
-\end{subfigure}
-\caption{Q2 seasonal model: normalized composition and scaled $N(t)$.}
-\label{fig:q2-timeseries}
-\end{figure}
-
-\subsection{Q3 creative extension: lattice vs small-world}
-For the lattice ($L=40$, $N=1600$), averaged over 8 seeds:
-\[
-\overline{d}_{\text{late}} = 0.0836,\quad
-(\bar R,\bar P,\bar S)=(0.3216,0.3600,0.3184).
-\]
-
-For the small-world model, Table~\ref{tab:q3sw} reports seed-averaged outcomes.
-
-\begin{table}[H]
-\centering
-\caption{Q3 small-world means over 8 seeds per $\beta$ (degree-normalized payoff).}
-\label{tab:q3sw}
 \begin{tabular}{ccccc}
 \toprule
-$\beta$ & Mean $C$ & Mean late $d$ & Mean final $(R,P,S)$ \\
+$s$ & $w$ & Median extinction time & Edge-contact fraction & Mean late $d$ \\
 \midrule
-0.0 & 0.6429 & 0.0322 & (0.3487, 0.3190, 0.3323) \\
-0.1 & 0.4699 & 0.0480 & (0.3212, 0.3437, 0.3352) \\
-0.5 & 0.0854 & 0.0580 & (0.3220, 0.3441, 0.3339) \\
+0.8 & 0.1 & 9069.0 & 0.95 & 0.5866 \\
+0.8 & 0.5 & 11194.5 & 1.00 & 0.6329 \\
+0.8 & 1.0 & 16848.0 & 0.80 & 0.5774 \\
+1.0 & 0.1 & 10534.5 & 1.00 & 0.5647 \\
+1.0 & 0.5 & 8426.0 & 1.00 & 0.6165 \\
+1.0 & 1.0 & 12563.5 & 1.00 & 0.6529 \\
+1.2 & 0.1 & 10534.5 & 1.00 & 0.5761 \\
+1.2 & 0.5 & 10206.5 & 1.00 & 0.5810 \\
+1.2 & 1.0 & 11383.5 & 0.95 & 0.6208 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Higher rewiring (lower clustering) tends to increase late-time distance from the mixed point in this setup, though variability across seeds remains non-negligible.
+\begin{figure}[!htbp]
+\centering
+\begin{subfigure}[c]{0.49\textwidth}
+\centering
+  \includegraphics[width=\linewidth,height=\panelimgheight,keepaspectratio]{results/q1_extinction_heatmap.png}
+  \caption{Median extinction time across the parameter grid.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[c]{0.49\textwidth}
+\centering
+  \includegraphics[width=\linewidth,height=\panelimgheight,keepaspectratio]{results/q1_extinction_boxplot.png}
+  \caption{Seed-level extinction distributions for all settings.}
+\end{subfigure}
+\caption{Question 1 statistical diagnostics.}
+\label{fig:q1-summary}
+\end{figure}
 
 \begin{figure}[H]
 \centering
-\begin{subfigure}[t]{0.32\textwidth}
-  \includegraphics[width=\textwidth]{results_q3_sw/sw_N1600_k8_beta0.0_C0.64_s1.0_w0.5_phase.png}
-  \caption{$\beta=0.0$}
+\includegraphics[width=0.86\textwidth]{results/q1_combined_s_w.png}
+\caption{Question 1 combined parameter diagnostics.}
+\label{fig:q1-trend}
+\end{figure}
+\vspace{-1.6em}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[c]{0.49\textwidth}
+\centering
+  \includegraphics[width=\linewidth,height=\panelimgheight,keepaspectratio]{results/N150_s1.0_w0.5_timeseries.png}
+  \caption{Count trajectories.}
 \end{subfigure}
 \hfill
-\begin{subfigure}[t]{0.32\textwidth}
-  \includegraphics[width=\textwidth]{results_q3_sw/sw_N1600_k8_beta0.1_C0.48_s1.0_w0.5_phase.png}
-  \caption{$\beta=0.1$}
+\begin{subfigure}[c]{0.49\textwidth}
+\centering
+  \includegraphics[width=\linewidth,height=\panelimgheight,keepaspectratio]{results/N150_s1.0_w0.5_phase.png}
+  \caption{Phase trajectory in the $R$--$P$ plane.}
+\end{subfigure}
+\vspace{0.35em}
+\begin{subfigure}[t]{0.49\textwidth}
+\centering
+  \includegraphics[width=\linewidth,height=\panelimgheight,keepaspectratio]{results/N150_s1.0_w0.5_distance.png}
+  \caption{Distance $d(t)$ from Eq.~\ref{eq:distance}.}
+\end{subfigure}
+\caption{Representative Question 1 run.}
+\label{fig:q1-rep}
+\end{figure}
+\vspace{-1.0em}
+\enlargethispage{3\baselineskip}
+
+\subsubsection*{Observations for $s=0.8$}
+The strongest pattern is monotonic growth in median extinction time as $w$ rises, from 9069 at $w=0.1$ to 16848 at $w=1.0$. However, edge-contact frequency is non-monotonic. It is 0.95 at $w=0.1$, reaches 1.00 at $w=0.5$, then drops to 0.80 at $w=1.0$. This indicates that stronger selection can increase persistence time in many runs while still producing a subset of runs that do not hit the boundary by the fixed horizon.
+
+\subsubsection*{Observations for $s=1.0$}
+The median extinction time is lowest at $w=0.5$, with value 8426. This is the fastest boundary approach in the full grid. At the same time, mean late distance grows with $w$ and reaches 0.6529 at $w=1.0$, which is the largest late-distance mean in Question 1. The combination suggests that for this payoff balance, stronger selection amplifies displacement even when extinction timing is not monotonic.
+
+\subsubsection*{Observations for $s=1.2$}
+For the higher loss severity setting, the median extinction times remain in a narrower band from 10206.5 to 11383.5. Edge-contact is nearly always present, with values 1.00, 1.00, and 0.95 across $w$. The main shift here is not in extinction timing but in sustained displacement, where mean late distance rises from 0.5761 to 0.6208 as $w$ increases.
+
+\subsubsection*{Cross-setting interpretation}
+The highest median extinction time appears at $(s,w)=(0.8,1.0)$, while the lowest appears at $(s,w)=(1.0,0.5)$. This gap is large enough to show that no single scalar setting of $s$ or $w$ can be called globally more stable. The combined figure is drawn against $s$ because $s$ is the cleaner organizing axis in this grid, while the effect of $w$ is real but changes across parameter regimes rather than acting as one monotone control.
+
+\subsection{Question 2: Seasonal demography with separate birth and death}
+Question 2 keeps the same game but changes event structure and allows variable population size. Table~\ref{tab:q2} shows that this model meets the intended forcing regime. Mean $N_{\min}=50.1$ and mean $N_{\max}=1792.5$ confirm a strong demographic cycle. Mean near-edge exposure is 0.1163, and the mean minimum strategy share is 0.0529.
+
+\begin{table}[!htbp]
+\centering
+\caption{Question 2 seed-averaged summary over 10 runs.}
+\label{tab:q2}
+\begin{tabular}{cccccccc}
+\toprule
+$N_{\min}$ & $N_{\max}$ & $\bar N$ & $N_{\text{last}}$ & Near-edge fraction & Mean $d$ & Late mean $d$ & Corr$(N,d)$ \\
+\midrule
+50.1 & 1792.5 & 927.8 & 186.4 & 0.1163 & 0.2048 & 0.2831 & 0.0608 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!htbp]
+\centering
+\begin{subfigure}[c]{0.49\textwidth}
+\centering
+  \includegraphics[width=\linewidth,height=\panelimgheight,keepaspectratio]{results_q2/seasonal_rps_baseline_timeseries.png}
+  \caption{Normalized composition with scaled $N(t)$ and seasonal birth signal.}
 \end{subfigure}
 \hfill
-\begin{subfigure}[t]{0.32\textwidth}
-  \includegraphics[width=\textwidth]{results_q3_sw/sw_N1600_k8_beta0.5_C0.09_s1.0_w0.5_phase.png}
-  \caption{$\beta=0.5$}
+\begin{subfigure}[c]{0.49\textwidth}
+\centering
+  \includegraphics[width=\linewidth,height=\panelimgheight,keepaspectratio]{results_q2/seasonal_rps_baseline_phase.png}
+  \caption{Normalized phase trace.}
 \end{subfigure}
-\caption{Q3 small-world phase plots for three rewiring levels.}
-\label{fig:q3-sw-phase}
+\caption{Baseline seasonal-demography trajectory.}
+\label{fig:q2-main}
 \end{figure}
 
-\section{Discussion and Critical Reflection}
-Overall, the implementation satisfies the three assignment components and produces coherent dynamics across well-mixed, seasonal, and networked settings. The strongest practical lesson from my results is that finite-size stochasticity is not a minor detail: it materially changes the apparent stability story compared with deterministic intuition. This is clearest in Q1, where the qualitative behavior can look different across seeds even for the same parameters, which means conclusions should rely on distributions (or at least repeated runs) rather than a single trajectory. In Q2, the model succeeds in creating pronounced population-size variation between small and large $N$, but the exact timing and depth of low-$N$ intervals remain sensitive to parameterization of the seasonal forcing, so interpretation should focus on robust patterns (e.g., sustained fluctuations and extinction pressure) rather than on individual transient episodes. In Q3, the lattice and small-world results show that structure matters, but they also highlight that network conclusions depend on update design choices such as payoff normalization and the observation window; this makes it important to avoid over-generalizing from one network construction or one time horizon. A reasonable next step would be to add confidence intervals for all key summary metrics and test an additional update rule (such as Fermi updating) to see which conclusions are process-specific versus structurally robust.
+The seed-level spread is important in this part. Near-edge fraction ranges from 0 to 0.8006 across seeds, so exposure is highly heterogeneous even under the same parameters. Several runs reach $N_{\min}=1$ and end with $N_{\text{last}}=1$, while other runs remain far from collapse. This confirms that demographic forcing creates windows of very high vulnerability in finite populations.
+
+Compared with Question 1, the interpretation changes. In fixed $N$ runs, first-extinction time is a direct stability proxy. In variable $N$ runs, temporary absence and recovery can happen repeatedly, so persistence must be judged through exposure over time and not only through one event timestamp. The average correlation Corr$(N,d)=0.0608$ is small, which means displacement cannot be read from population size alone.
+
+\subsection{Question 3: Lattice extension and network comparison}
+The creative extension keeps Local Update and changes only interaction structure. The lattice model is kept as the main extension, and the small-world analysis is used as a structural comparison under the same update logic. This choice is grounded in the spatial evolutionary-game literature. Reviews of games on graphs emphasize that topology can alter fixation, clustering, and coexistence behavior even when the payoff matrix is unchanged \cite{szabo2007}. For cyclic-dominance systems more specifically, local spatial interactions are known to support persistent pattern formation and biodiversity, while stronger effective mixing can weaken that stabilizing role \cite{reichenbach2007,varga2014}. The small-world comparison therefore has a clear literature motivation rather than being only a technical add-on.
+
+\begin{table}[!htbp]
+\centering
+\caption{Lattice summary over 8 seeds.}
+\label{tab:q3-lattice}
+\begin{tabular}{ccccc}
+\toprule
+Mean late $d$ & Min late $d$ & Max late $d$ & Mean final $R$ & Mean final $P$ \\
+\midrule
+0.0836 & 0.0347 & 0.1269 & 0.3216 & 0.3600 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[!htbp]
+\centering
+\begin{subfigure}[c]{0.49\textwidth}
+\centering
+  \includegraphics[width=\linewidth,height=\panelimgheight,keepaspectratio]{results_q3/lattice_rps_timeseries.png}
+  \caption{Lattice composition trajectory.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[c]{0.49\textwidth}
+\centering
+  \includegraphics[width=\linewidth,height=\panelimgheight,keepaspectratio]{results_q3/lattice_rps_phase.png}
+  \caption{Lattice phase trajectory.}
+\end{subfigure}
+\vspace{0.9em}
+\makebox[\textwidth][c]{%
+\begin{subfigure}[t]{0.49\textwidth}
+\centering
+  \includegraphics[width=\linewidth,height=\panelimgheight,keepaspectratio]{results_q3/lattice_seed_summary.png}
+  \caption{Lattice seed-level spread.}
+\end{subfigure}
+}
+\caption{Lattice extension diagnostics.}
+\label{fig:q3-lattice}
+\end{figure}
+
+The lattice late-distance values remain moderate and finite-size spread is visible. Mean final shares are close to balanced, with implied mean $S=0.3184$. The spread in late-distance from 0.0347 to 0.1269 shows that local interactions do not remove stochastic variability, but they keep trajectories near the coexistence region in most runs. Qualitatively, this is aligned with the spatial RPS literature in which local neighborhoods generate self-organized coexistence patterns instead of immediate global collapse \cite{reichenbach2007,varga2014}.
+
+\begin{table}[H]
+\centering
+\caption{Small-world summary over 8 seeds per rewiring level.}
+\label{tab:q3sw}
+\begin{tabular}{cccc}
+\toprule
+$\beta$ & Mean clustering $C$ & Mean late $d$ with std & Mean final $(R,P,S)$ \\
+\midrule
+0.0 & 0.6429 & 0.0322 \;\;($0.0211$) & $(0.3487,0.3190,0.3323)$ \\
+0.1 & 0.4699 & 0.0480 \;\;($0.0213$) & $(0.3212,0.3437,0.3352)$ \\
+0.5 & 0.0854 & 0.0580 \;\;($0.0368$) & $(0.3220,0.3441,0.3339)$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+\vspace{-0.35em}
+
+\begin{figure}[H]
+\centering
+\begin{subfigure}[c]{0.49\textwidth}
+\centering
+  \includegraphics[width=\linewidth,height=\panelimgheight,keepaspectratio]{results_q3_sw/q3_sw_beta_distance_clustering.png}
+  \caption{Rewiring against clustering and late distance.}
+\end{subfigure}
+\hfill
+\begin{subfigure}[c]{0.49\textwidth}
+\centering
+  \includegraphics[width=\linewidth,height=\panelimgheight,keepaspectratio]{results_q3_sw/q3_sw_clustering_vs_distance.png}
+  \caption{Seed-level clustering--distance relationship.}
+\end{subfigure}
+\caption{Small-world structural diagnostics.}
+\label{fig:q3-sw}
+\end{figure}
+\vspace{-0.35em}
+\enlargethispage{2\baselineskip}
+
+The small-world comparison shows a clear gradient: clustering falls as rewiring increases, while mean late distance rises from 0.0322 to 0.0580. The largest variability appears at $\beta=0.5$, where the late-distance standard deviation reaches 0.0368. This indicates that high rewiring increases both displacement and seed sensitivity. That interpretation is consistent with graph-based evolutionary-game results in which increased long-range connectivity changes local shielding and makes the process behave more like a mixed interaction system \cite{watts1998,szabo2007}.
+
+Compared with Questions 1 and 2, the extension highlights a different control variable. In Question 1, outcomes were mainly shaped by payoff and selection parameters. In Question 2, outcomes were strongly shaped by demographic forcing. In Question 3, outcomes are shaped by who interacts with whom, even under the same strategic rule.
+
+\section{Integrated Interpretation}
+Taken together, the three questions show that coexistence in finite populations is conditional and mechanism-dependent. The fixed-size sweep demonstrates that parameter effects are not globally monotonic, so interpretation must be based on distributions rather than single trajectories. The seasonal model demonstrates that demographic forcing changes what stability evidence is meaningful, because temporary strategy loss can appear without immediate terminal collapse. The structural extension demonstrates that network organization can shift both average displacement and variability even when the update rule is unchanged.
+
+The most consistent pattern across all parts is that no single metric is sufficient. Extinction timing, edge-contact exposure, late-time displacement, and structural summaries each reveal a different aspect of finite-population behavior. The report therefore treats claims as multi-metric and comparative, which is closer to how these stochastic systems should be evaluated in practice.
+
+\section{Critical Reflection}
+The analysis is stronger than a trajectory-only writeup, but several limits remain and affect interpretation. The first limit is finite horizon dependence because metrics such as late-time means and first-extinction times can shift when the observation window changes. The second limit is parameter scope because the chosen values for $s$, $w$, and seasonal forcing are informative but still represent only one region of the model space. The third limit is inferential scope because the study reports descriptive seed statistics and not formal confidence intervals or hypothesis tests. The fourth limit is model scope because Local Update is only one evolutionary rule, so broader conclusions about cyclic dominance would need direct replication under alternative rules. Even with these limits, the central comparisons are internally consistent, reproducible from the scripts, and supported by repeated-seed evidence rather than isolated runs.
 
 \section{Conclusion}
-This coursework reproduces finite-population RPS dynamics under Local Update, extends to seasonally fluctuating birth/death with variable population size, and explores spatial/network effects in a creative extension. The main practical takeaway is that finite stochasticity and update-process details materially affect apparent stability/coexistence, so robust multi-seed analysis is necessary before drawing conclusions.
+This report provides a complete finite-population RPS analysis across three linked models with one consistent strategic core. Question 1 shows that stability claims depend on which statistic is used and cannot be reduced to one trajectory. Question 2 shows that seasonal demography creates strong risk heterogeneity and changes how persistence should be measured. Question 3 shows that interaction structure alone can shift both displacement and variability while preserving the same game and update process. The overall takeaway is that credible conclusions in finite-population evolutionary dynamics require explicit comparisons, repeated seeds, and metric choices that match the mechanism under study.
 
 \section*{Acknowledgements and Source Statement}
-All code and analysis in this submission were prepared by Ameer Alhashemi. External sources used for model specification and interpretation are cited in this report and acknowledged in the script headers.
+All modelling decisions, simulations, and interpretation in this submission were completed by Ameer Alhashemi. External theoretical sources that informed model framing are cited in the references, and script headers include source acknowledgements.
 
 \bibliographystyle{plain}
 \bibliography{references}

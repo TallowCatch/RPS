@@ -2,7 +2,7 @@
 Q1: Finite-population non-zero-sum RPS with pairwise comparison (Local Update).
 
 Sources acknowledged:
-- GT_Coursework_March2026_v01.pdf (assignment specification).
+- Module brief for March 2026 (project specification).
 - Claussen (2016), "Evolutionary Dynamics: How Payoffs and Global Feedback..."
   for finite-population Local Update process context.
 - Traulsen, Claussen, Hauert (2006), Phys. Rev. E 74, 011901
@@ -20,6 +20,17 @@ import numpy as np
 
 R, P, S = 0, 1, 2
 
+plt.rcParams.update(
+    {
+        "font.size": 12,
+        "axes.titlesize": 13,
+        "axes.labelsize": 12,
+        "xtick.labelsize": 11,
+        "ytick.labelsize": 11,
+        "legend.fontsize": 10,
+    }
+)
+
 
 def payoff_from_counts(strategy, counts, s):
     n_r, n_p, n_s = counts
@@ -31,7 +42,7 @@ def payoff_from_counts(strategy, counts, s):
 
 
 def pairwise_probability(pi_a, pi_b, w, pi_max_diff):
-    # Coursework local-update form:
+    # Local-update form:
     # p_{B->A} = 1/2 + w (pi_A - pi_B) / (2 * 4 * pi_max)
     p = 0.5 + (w * (pi_a - pi_b)) / (8.0 * pi_max_diff)
     return float(np.clip(p, 0.0, 1.0))
@@ -84,29 +95,189 @@ def first_extinction_time(rt, pt, st):
     return int(extinct_idx[0])
 
 
-def plot_results(rt, pt, name):
+def distance_to_mixed(rt, pt, st):
+    n = rt + pt + st + 1e-12
+    r = rt / n
+    p = pt / n
+    return np.sqrt((r - 1.0 / 3.0) ** 2 + (p - 1.0 / 3.0) ** 2)
+
+
+def plot_results(rt, pt, st, name):
     t = np.arange(len(rt))
 
     os.makedirs("results", exist_ok=True)
 
-    plt.figure()
+    plt.figure(figsize=(8.8, 4.8))
     plt.plot(t, rt, label="R(t)")
     plt.plot(t, pt, label="P(t)")
     plt.xlabel("t")
     plt.ylabel("count")
     plt.legend()
-    plt.title(name)
     plt.tight_layout()
     plt.savefig(f"results/{name}_timeseries.png", dpi=160)
     plt.close()
 
-    plt.figure()
+    plt.figure(figsize=(6.2, 5.8))
     plt.plot(rt, pt, linewidth=1)
     plt.xlabel("R")
     plt.ylabel("P")
-    plt.title(name)
     plt.tight_layout()
     plt.savefig(f"results/{name}_phase.png", dpi=160)
+    plt.close()
+
+    dist = distance_to_mixed(rt, pt, st)
+    plt.figure(figsize=(8.8, 4.8))
+    plt.plot(t, dist)
+    plt.xlabel("t")
+    plt.ylabel("distance d(t) to mixed state")
+    plt.tight_layout()
+    plt.savefig(f"results/{name}_distance.png", dpi=160)
+    plt.close()
+
+
+def plot_q1_summary(rows, long_rows, s_values, w_values):
+    s_values = list(s_values)
+    w_values = list(w_values)
+
+    med_ext = np.zeros((len(s_values), len(w_values)))
+    edge_frac = np.zeros((len(s_values), len(w_values)))
+    late_dist = np.zeros((len(s_values), len(w_values)))
+    for i, s in enumerate(s_values):
+        for j, w in enumerate(w_values):
+            row = next(
+                r for r in rows if float(r["s"]) == float(s) and float(r["w"]) == float(w)
+            )
+            med_ext[i, j] = float(row["extinction_time_median"])
+            edge_frac[i, j] = float(row["edge_contact_fraction"])
+            late_dist[i, j] = float(row["late_distance_mean_mean"])
+
+    plt.figure(figsize=(7.2, 5.0))
+    im = plt.imshow(med_ext, cmap="viridis", aspect="auto", origin="lower")
+    plt.colorbar(im, label="median first-extinction time")
+    plt.xticks(range(len(w_values)), [str(w) for w in w_values])
+    plt.yticks(range(len(s_values)), [str(s) for s in s_values])
+    plt.xlabel("w")
+    plt.ylabel("s")
+    for i in range(len(s_values)):
+        for j in range(len(w_values)):
+            plt.text(
+                j,
+                i,
+                f"{med_ext[i, j]:.0f}",
+                ha="center",
+                va="center",
+                color="white",
+                fontsize=10,
+            )
+    plt.tight_layout()
+    plt.savefig("results/q1_extinction_heatmap.png", dpi=160)
+    plt.close()
+
+    plt.figure(figsize=(7.2, 5.0))
+    im = plt.imshow(
+        edge_frac, cmap="magma", aspect="auto", origin="lower", vmin=0.0, vmax=1.0
+    )
+    plt.colorbar(im, label="edge-contact fraction")
+    plt.xticks(range(len(w_values)), [str(w) for w in w_values])
+    plt.yticks(range(len(s_values)), [str(s) for s in s_values])
+    plt.xlabel("w")
+    plt.ylabel("s")
+    for i in range(len(s_values)):
+        for j in range(len(w_values)):
+            plt.text(
+                j,
+                i,
+                f"{edge_frac[i, j]:.2f}",
+                ha="center",
+                va="center",
+                color="white",
+                fontsize=10,
+            )
+    plt.tight_layout()
+    plt.savefig("results/q1_edge_contact_heatmap.png", dpi=160)
+    plt.close()
+
+    plt.figure(figsize=(7.0, 4.8))
+    for s in s_values:
+        ys = []
+        for w in w_values:
+            row = next(
+                r for r in rows if float(r["s"]) == float(s) and float(r["w"]) == float(w)
+            )
+            ys.append(float(row["extinction_time_median"]))
+        plt.plot(w_values, ys, marker="o", label=f"s={s}")
+    plt.xlabel("w")
+    plt.ylabel("median first-extinction time")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("results/q1_median_extinction_vs_w.png", dpi=160)
+    plt.close()
+
+    fig, axes = plt.subplots(1, 2, figsize=(11.2, 4.8), sharex=True)
+    markers = ["o", "s", "^", "D"]
+    for j, w in enumerate(w_values):
+        axes[0].plot(
+            s_values,
+            med_ext[:, j],
+            marker=markers[j % len(markers)],
+            linewidth=2.0,
+            label=f"w={w}",
+        )
+        axes[1].plot(
+            s_values,
+            late_dist[:, j],
+            marker=markers[j % len(markers)],
+            linewidth=2.0,
+            label=f"w={w}",
+        )
+
+    axes[0].set_xlabel("s")
+    axes[0].set_ylabel("median first-extinction time")
+    axes[0].grid(alpha=0.25)
+
+    axes[1].set_xlabel("s")
+    axes[1].set_ylabel("mean late-time distance")
+    axes[1].grid(alpha=0.25)
+
+    axes[0].legend(loc="best")
+    fig.tight_layout()
+    fig.savefig("results/q1_combined_s_w.png", dpi=160, bbox_inches="tight")
+    plt.close(fig)
+
+    plt.figure(figsize=(7.0, 4.8))
+    for s in s_values:
+        ys = []
+        for w in w_values:
+            row = next(
+                r for r in rows if float(r["s"]) == float(s) and float(r["w"]) == float(w)
+            )
+            ys.append(float(row["late_distance_mean_mean"]))
+        plt.plot(w_values, ys, marker="o", label=f"s={s}")
+    plt.xlabel("w")
+    plt.ylabel("mean late-time distance")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig("results/q1_late_distance_vs_w.png", dpi=160)
+    plt.close()
+
+    groups = []
+    labels = []
+    for s in s_values:
+        for w in w_values:
+            vals = [
+                float(r["extinction_time"])
+                for r in long_rows
+                if float(r["s"]) == float(s) and float(r["w"]) == float(w)
+            ]
+            groups.append(vals)
+            labels.append(f"s={s}\nw={w}")
+
+    plt.figure(figsize=(10.8, 5.2))
+    plt.boxplot(groups, showfliers=False)
+    plt.xticks(range(1, len(labels) + 1), labels, rotation=0)
+    plt.ylabel("first-extinction time")
+    plt.tight_layout()
+    plt.savefig("results/q1_extinction_boxplot.png", dpi=160)
     plt.close()
 
 
@@ -119,23 +290,45 @@ def run_q1_sweep(
 ):
     os.makedirs("results", exist_ok=True)
     rows = []
+    long_rows = []
     for s in s_values:
         for w in w_values:
             extinction_times = []
+            late_distances = []
             final_r = []
             final_p = []
             for seed in range(n_seeds):
                 rt, pt, st = run_rps_pairwise(N=N, s=s, w=w, T=T, seed=seed)
                 t_ext = first_extinction_time(rt, pt, st)
-                extinction_times.append((T + 1) if t_ext is None else t_ext)
+                t_ext_val = (T + 1) if t_ext is None else t_ext
+                extinction_times.append(t_ext_val)
+
+                dist = distance_to_mixed(rt, pt, st)
+                late_d = float(np.mean(dist[-5000:]))
+                late_distances.append(late_d)
                 final_r.append(rt[-1] / N)
                 final_p.append(pt[-1] / N)
 
+                long_rows.append(
+                    {
+                        "N": N,
+                        "T": T,
+                        "s": s,
+                        "w": w,
+                        "seed": seed,
+                        "extinction_time": t_ext_val,
+                        "edge_contact": int(t_ext_val <= T),
+                        "late_distance_mean": late_d,
+                        "final_R": float(rt[-1] / N),
+                        "final_P": float(pt[-1] / N),
+                    }
+                )
+
             # Representative trajectory for figures.
-            rep_rt, rep_pt, _ = run_rps_pairwise(N=N, s=s, w=w, T=T, seed=1)
+            rep_rt, rep_pt, rep_st = run_rps_pairwise(N=N, s=s, w=w, T=T, seed=1)
             name = f"N{N}_s{s}_w{w}"
             print("Running:", name)
-            plot_results(rep_rt, rep_pt, name)
+            plot_results(rep_rt, rep_pt, rep_st, name)
 
             row = {
                 "N": N,
@@ -147,6 +340,13 @@ def run_q1_sweep(
                 "extinction_time_median": float(np.median(extinction_times)),
                 "extinction_time_min": int(np.min(extinction_times)),
                 "extinction_time_max": int(np.max(extinction_times)),
+                "extinction_time_q25": float(np.percentile(extinction_times, 25)),
+                "extinction_time_q75": float(np.percentile(extinction_times, 75)),
+                "edge_contact_fraction": float(np.mean(np.array(extinction_times) <= T)),
+                "late_distance_mean_mean": float(np.mean(late_distances)),
+                "late_distance_mean_std": float(np.std(late_distances)),
+                "late_distance_q25": float(np.percentile(late_distances, 25)),
+                "late_distance_q75": float(np.percentile(late_distances, 75)),
                 "final_R_mean": float(np.mean(final_r)),
                 "final_P_mean": float(np.mean(final_p)),
             }
@@ -158,6 +358,15 @@ def run_q1_sweep(
         writer.writeheader()
         writer.writerows(rows)
     print("Saved:", out_csv)
+
+    out_long_csv = "results/q1_seed_metrics.csv"
+    with open(out_long_csv, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=list(long_rows[0].keys()))
+        writer.writeheader()
+        writer.writerows(long_rows)
+    print("Saved:", out_long_csv)
+
+    plot_q1_summary(rows, long_rows, s_values=s_values, w_values=w_values)
 
 
 def main():

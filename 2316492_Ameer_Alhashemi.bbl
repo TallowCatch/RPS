@@ -1,0 +1,52 @@
+\begin{thebibliography}{1}
+
+\bibitem{claussen2007}
+Jens~Christian Claussen.
+\newblock Drift reversal in asymmetric conflicts.
+\newblock {\em The European Physical Journal B}, 60:391--399, 2007.
+
+\bibitem{claussen2016}
+Jens~Christian Claussen.
+\newblock Evolutionary dynamics: How payoffs and global feedback control the
+  stability.
+\newblock In {\em Complex Systems and Self-organization Modelling}, chapter~24.
+  Springer, 2016.
+
+\bibitem{hofbauer1998}
+Josef Hofbauer and Karl Sigmund.
+\newblock {\em Evolutionary Games and Population Dynamics}.
+\newblock Cambridge University Press, 1998.
+
+\bibitem{nowak2006}
+Martin~A. Nowak.
+\newblock {\em Evolutionary Dynamics: Exploring the Equations of Life}.
+\newblock Harvard University Press, 2006.
+
+\bibitem{reichenbach2007}
+Tobias Reichenbach, Mauro Mobilia, and Erwin Frey.
+\newblock Mobility promotes and jeopardizes biodiversity in
+  rock--paper--scissors games.
+\newblock {\em Nature}, 448:1046--1049, 2007.
+
+\bibitem{szabo2007}
+Gy{\"o}rgy Szab{\'o} and G{\'a}bor F{\'a}th.
+\newblock Evolutionary games on graphs.
+\newblock {\em Physics Reports}, 446(4--6):97--216, 2007.
+
+\bibitem{traulsen2006}
+Arne Traulsen, Jens~C. Claussen, and Christoph Hauert.
+\newblock Coevolutionary dynamics in large, but finite populations.
+\newblock {\em Physical Review E}, 74(1):011901, 2006.
+
+\bibitem{varga2014}
+Levente Varga, Jeromos Vukov, and Gy{\"o}rgy Szab{\'o}.
+\newblock Self-organizing patterns in an evolutionary rock-paper-scissors game
+  for stochastic synchronized strategy updates.
+\newblock {\em Physical Review E}, 90:042920, 2014.
+
+\bibitem{watts1998}
+Duncan~J. Watts and Steven~H. Strogatz.
+\newblock Collective dynamics of `small-world' networks.
+\newblock {\em Nature}, 393:440--442, 1998.
+
+\end{thebibliography}
