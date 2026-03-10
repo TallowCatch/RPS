@@ -80,7 +80,7 @@ s\in\{0.8,1.0,1.2\},\quad w\in\{0.1,0.5,1.0\},
 \end{equation*}
 with 20 seeds for each pair. This gives nine parameter settings and 180 total runs. The design goal is to see both how payoff asymmetry changes drift pressure and how selection intensity changes adaptation speed.
 
-For Question 2, strategy switching is replaced by separate birth-only and death-only events. Birth probability is
+For Question 2, the pairwise payoff comparison is kept, but the resulting event is no longer direct strategy replacement. Each step still samples two agents and compares their payoffs; the higher-payoff agent is more likely to supply the offspring in a birth event or to survive in a death event. Birth probability is
 \begin{equation}
 b(t)=b_0+a\sin\left(\frac{2\pi t}{T_{\text{season}}}\right),
 \end{equation}
@@ -211,7 +211,7 @@ The highest median extinction time appears at $(s,w)=(0.8,1.0)$, while the lowes
 The bootstrap uncertainty checks in Table~\ref{tab:uncertainty} keep the high-persistence setting centered clearly above the lowest-persistence setting, which supports this ranking while still showing substantial finite-population spread.
 
 \subsection{Question 2: Seasonal demography with separate birth and death}
-Question 2 keeps the same game but changes event structure and allows variable population size. Table~\ref{tab:q2} shows that this model meets the intended forcing regime. Mean $N_{\min}=50.1$ and mean $N_{\max}=1792.5$ confirm a strong demographic cycle. Mean near-edge exposure is 0.1163, and the mean minimum strategy share is 0.0529.
+Question 2 keeps the same game but changes event structure and allows variable population size. The strategic comparison mechanism is unchanged, but its outcome is expressed through payoff-biased birth and death events instead of direct imitation. Table~\ref{tab:q2} shows that this model meets the intended forcing regime. Mean $N_{\min}=50.1$ and mean $N_{\max}=1792.5$ confirm a strong demographic cycle. Mean near-edge exposure is 0.1163, and the mean minimum strategy share is 0.0529.
 
 \begin{table}[!htbp]
 \centering
