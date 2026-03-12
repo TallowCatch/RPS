@@ -1,8 +1,23 @@
-# Ameer_Alhashemi source code bundle
+Game Theory Source Code
+Ameer Alhashemi
+Student ID: 2316492
+Combined source-code booklet for submission
 
-============================================================
-FILE: rps_q1.py
-============================================================
+This document reproduces the exact source files used for the submitted report.
+Each section begins with the filename and then the full file contents.
+
+Contents
+1. rps_q1.py (377 lines)
+2. rps_q2.py (255 lines)
+3. rps_q3_lattice.py (205 lines)
+4. rps_q3_smallworld.py (363 lines)
+5. rps_theory_replicator.py (91 lines)
+6. report_uncertainty_checks.py (156 lines)
+
+========================================================================================
+1. rps_q1.py
+Full file contents reproduced exactly as submitted. 377 lines.
+========================================================================================
 
 """
 Q1: Finite-population non-zero-sum RPS with pairwise comparison (Local Update).
@@ -382,10 +397,10 @@ def main():
 if __name__ == "__main__":
     main()
 
-
-============================================================
-FILE: rps_q2.py
-============================================================
+========================================================================================
+2. rps_q2.py
+Full file contents reproduced exactly as submitted. 255 lines.
+========================================================================================
 
 """
 Q2: Seasonal birth-only/death-only extension with fluctuating population size.
@@ -643,10 +658,10 @@ def main():
 if __name__ == "__main__":
     main()
 
-
-============================================================
-FILE: rps_q3_lattice.py
-============================================================
+========================================================================================
+3. rps_q3_lattice.py
+Full file contents reproduced exactly as submitted. 205 lines.
+========================================================================================
 
 """
 Q3 variant: RPS on a periodic lattice using pairwise local update.
@@ -854,10 +869,10 @@ if __name__ == "__main__":
     print("Saved:", out_csv)
     plot_lattice_seed_summary(rows)
 
-
-============================================================
-FILE: rps_q3_smallworld.py
-============================================================
+========================================================================================
+4. rps_q3_smallworld.py
+Full file contents reproduced exactly as submitted. 363 lines.
+========================================================================================
 
 """
 Q3 (creative): RPS on a Watts-Strogatz small-world network.
@@ -1223,10 +1238,10 @@ def main():
 if __name__ == "__main__":
     main()
 
-
-============================================================
-FILE: rps_theory_replicator.py
-============================================================
+========================================================================================
+5. rps_theory_replicator.py
+Full file contents reproduced exactly as submitted. 91 lines.
+========================================================================================
 
 """
 Deterministic replicator benchmark for the RPS payoff family used in the report.
@@ -1320,10 +1335,10 @@ def plot_replicator_benchmark():
 if __name__ == "__main__":
     plot_replicator_benchmark()
 
-
-============================================================
-FILE: report_uncertainty_checks.py
-============================================================
+========================================================================================
+6. report_uncertainty_checks.py
+Full file contents reproduced exactly as submitted. 156 lines.
+========================================================================================
 
 """
 Selected bootstrap uncertainty checks for the final report.
@@ -1481,5 +1496,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
