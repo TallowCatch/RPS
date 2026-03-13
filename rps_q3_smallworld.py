@@ -4,7 +4,9 @@ Q3 (creative): RPS on a Watts-Strogatz small-world network.
 Sources acknowledged:
 - Module brief for March 2026 (creative lattice/network extension).
 - Watts & Strogatz (1998), Nature 393:440-442 (small-world network model).
-- Claussen (2016), Chapter 24 (Local Update pairwise process in finite populations).
+- Claussen (2016), Chapter 24, "Evolutionary Dynamics: How Payoffs and
+  Global Feedback Control the Stability" for Local Update pairwise
+  process in finite populations.
 
 Authorship note:
 - This implementation in this repository was prepared by Ameer Alhashemi.

@@ -7,16 +7,16 @@ This document reproduces the exact source files used for the submitted report.
 Each section begins with the filename and then the full file contents.
 
 Contents
-1. rps_q1.py (377 lines)
-2. rps_q2.py (255 lines)
-3. rps_q3_lattice.py (205 lines)
-4. rps_q3_smallworld.py (363 lines)
+1. rps_q1.py (378 lines)
+2. rps_q2.py (257 lines)
+3. rps_q3_lattice.py (206 lines)
+4. rps_q3_smallworld.py (365 lines)
 5. rps_theory_replicator.py (91 lines)
 6. report_uncertainty_checks.py (156 lines)
 
 ========================================================================================
 1. rps_q1.py
-Full file contents reproduced exactly as submitted. 377 lines.
+Full file contents reproduced exactly as submitted. 378 lines.
 ========================================================================================
 
 """
@@ -24,8 +24,9 @@ Q1: Finite-population non-zero-sum RPS with pairwise comparison (Local Update).
 
 Sources acknowledged:
 - Module brief for March 2026 (project specification).
-- Claussen (2016), "Evolutionary Dynamics: How Payoffs and Global Feedback..."
-  for finite-population Local Update process context.
+- Claussen (2016), Chapter 24, "Evolutionary Dynamics: How Payoffs and
+  Global Feedback Control the Stability" for finite-population Local
+  Update process context.
 - Traulsen, Claussen, Hauert (2006), Phys. Rev. E 74, 011901
   for pairwise comparison process background.
 
@@ -399,7 +400,7 @@ if __name__ == "__main__":
 
 ========================================================================================
 2. rps_q2.py
-Full file contents reproduced exactly as submitted. 255 lines.
+Full file contents reproduced exactly as submitted. 257 lines.
 ========================================================================================
 
 """
@@ -407,7 +408,9 @@ Q2: Seasonal birth-only/death-only extension with fluctuating population size.
 
 Sources acknowledged:
 - Module brief for March 2026 (requirement for separate birth and death processes).
-- Claussen (2016), Chapter 24 (finite-population stochastic local-update context).
+- Claussen (2016), Chapter 24, "Evolutionary Dynamics: How Payoffs and
+  Global Feedback Control the Stability" for finite-population stochastic
+  Local Update context.
 
 Authorship note:
 - This implementation in this repository was prepared by Ameer Alhashemi.
@@ -660,7 +663,7 @@ if __name__ == "__main__":
 
 ========================================================================================
 3. rps_q3_lattice.py
-Full file contents reproduced exactly as submitted. 205 lines.
+Full file contents reproduced exactly as submitted. 206 lines.
 ========================================================================================
 
 """
@@ -668,7 +671,8 @@ Q3 variant: RPS on a periodic lattice using pairwise local update.
 
 Sources acknowledged:
 - Module brief for March 2026 (creative lattice/network extension).
-- Claussen (2016), Chapter 24 (Local Update process context).
+- Claussen (2016), Chapter 24, "Evolutionary Dynamics: How Payoffs and
+  Global Feedback Control the Stability" for Local Update process context.
 
 Authorship note:
 - This implementation in this repository was prepared by Ameer Alhashemi.
@@ -871,7 +875,7 @@ if __name__ == "__main__":
 
 ========================================================================================
 4. rps_q3_smallworld.py
-Full file contents reproduced exactly as submitted. 363 lines.
+Full file contents reproduced exactly as submitted. 365 lines.
 ========================================================================================
 
 """
@@ -880,7 +884,9 @@ Q3 (creative): RPS on a Watts-Strogatz small-world network.
 Sources acknowledged:
 - Module brief for March 2026 (creative lattice/network extension).
 - Watts & Strogatz (1998), Nature 393:440-442 (small-world network model).
-- Claussen (2016), Chapter 24 (Local Update pairwise process in finite populations).
+- Claussen (2016), Chapter 24, "Evolutionary Dynamics: How Payoffs and
+  Global Feedback Control the Stability" for Local Update pairwise
+  process in finite populations.
 
 Authorship note:
 - This implementation in this repository was prepared by Ameer Alhashemi.

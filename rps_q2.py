@@ -3,7 +3,9 @@ Q2: Seasonal birth-only/death-only extension with fluctuating population size.
 
 Sources acknowledged:
 - Module brief for March 2026 (requirement for separate birth and death processes).
-- Claussen (2016), Chapter 24 (finite-population stochastic local-update context).
+- Claussen (2016), Chapter 24, "Evolutionary Dynamics: How Payoffs and
+  Global Feedback Control the Stability" for finite-population stochastic
+  Local Update context.
 
 Authorship note:
 - This implementation in this repository was prepared by Ameer Alhashemi.

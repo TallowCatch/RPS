@@ -3,7 +3,8 @@ Q3 variant: RPS on a periodic lattice using pairwise local update.
 
 Sources acknowledged:
 - Module brief for March 2026 (creative lattice/network extension).
-- Claussen (2016), Chapter 24 (Local Update process context).
+- Claussen (2016), Chapter 24, "Evolutionary Dynamics: How Payoffs and
+  Global Feedback Control the Stability" for Local Update process context.
 
 Authorship note:
 - This implementation in this repository was prepared by Ameer Alhashemi.

@@ -3,8 +3,9 @@ Q1: Finite-population non-zero-sum RPS with pairwise comparison (Local Update).
 
 Sources acknowledged:
 - Module brief for March 2026 (project specification).
-- Claussen (2016), "Evolutionary Dynamics: How Payoffs and Global Feedback..."
-  for finite-population Local Update process context.
+- Claussen (2016), Chapter 24, "Evolutionary Dynamics: How Payoffs and
+  Global Feedback Control the Stability" for finite-population Local
+  Update process context.
 - Traulsen, Claussen, Hauert (2006), Phys. Rev. E 74, 011901
   for pairwise comparison process background.
 
